@@ -1,0 +1,12 @@
+# Copyright (c) 2021 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+config PCT2075
+	bool "Driver for NXP PCT2075"
+	default y
+	#depends on DT_HAS_NXP_PCT2075_ENABLED
+	select I2C
+	select SENSOR
+	help
+	  Enable driver for the pct2075 temperature sensor
+

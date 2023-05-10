@@ -1,0 +1,33 @@
+/ {
+    chosen {
+        zephyr,console = &cdc_acm_uart0;
+        zephyr,shell-uart = &cdc_acm_uart0;
+    };
+
+   	aliases {
+   		led0 = &led_blue;
+   	};
+
+   	leds {
+   		compatible = "gpio-leds";
+   		led_blue: led_0 {
+   			gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+                };
+   	};
+};
+
+&zephyr_udc0 {
+    cdc_acm_uart0: cdc_acm_uart0 {
+        compatible = "zephyr,cdc-acm-uart";
+    };
+};
+
+&i2c0 {
+    status = "okay";
+    
+    pct2075: pct2075@37 {
+        compatible = "nxp,pct2075";
+        reg = <0x37>;
+        status = "okay";
+    };
+};
