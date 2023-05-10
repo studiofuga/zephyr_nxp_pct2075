@@ -80,6 +80,35 @@ static int read_uint16_register(const struct device *dev, uint8_t reg, uint16_t 
 	return 0;
 }
 
+/* Temperature register has a slightly different reading procedure. */
+static int read_temp16_register(const struct device *dev, uint16_t *v)
+{
+    const struct pct2075_config *config = dev->config;
+
+	uint8_t cmd[] = {PCT2075_REG_TEMP};
+	uint16_t rv;
+
+	struct i2c_msg msgs[2] = {
+		{
+			.buf = cmd,
+			.len = 1,
+			.flags = I2C_MSG_WRITE | I2C_MSG_STOP,
+		},
+		{
+			.buf = (uint8_t*)&rv,
+			.len = 2,
+			.flags = I2C_MSG_READ | I2C_MSG_RESTART | I2C_MSG_STOP,
+		},
+	};
+
+	if (i2c_transfer_dt(&config->i2c, msgs, 2) != 0) {
+		return -EIO;
+	}
+
+	*v = sys_be16_to_cpu(rv);
+	return 0;
+}
+
 static int pct2075_chip_init(const struct device *dev)
 {
     const struct pct2075_config *config = dev->config;
@@ -131,7 +160,7 @@ static int pct2075_sample_fetch(const struct device *dev,
 {
     struct pct2075_data *data = dev->data;
 
-	if (read_uint16_register(dev, PCT2075_REG_TEMP, &data->rawtemp)) {
+	if (read_temp16_register(dev, &data->rawtemp)) {
     	LOG_ERR("Cannot read temperature register.");
     	return -EIO;
     }
