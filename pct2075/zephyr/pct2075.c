@@ -12,6 +12,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/pm/device.h>
+#include <zephyr/sys/byteorder.h>
 
 
 #include <zephyr/logging/log.h>
@@ -44,6 +45,8 @@ LOG_MODULE_REGISTER(PCT2075, CONFIG_SENSOR_LOG_LEVEL);
 struct pct2075_data {
 	uint16_t addr;
 	uint8_t type;
+
+	uint16_t rawtemp;
 };
 
 struct pct2075_config {
@@ -65,6 +68,17 @@ static int read_register(const struct device *dev, uint8_t reg, void *dt, uint8_
 	return 0;
 }
 
+static int read_uint16_register(const struct device *dev, uint8_t reg, uint16_t *v)
+{
+	uint8_t rv[2];
+	int err;
+
+	err = read_register(dev, reg, rv, 2);
+	if (err) return err;
+
+	*v = sys_be16_to_cpu(*rv);
+	return 0;
+}
 
 static int pct2075_chip_init(const struct device *dev)
 {
@@ -80,19 +94,19 @@ static int pct2075_chip_init(const struct device *dev)
     uint8_t conf;
     if (read_register(dev, PCT2075_REG_CONFIG, &conf, 1)) {
     	LOG_ERR("Cannot read config register.");
-    	return -ENODEV;
+    	return -EIO;
     }
 
 	uint16_t tos, thys;
 
-    if (read_register(dev, PCT2075_REG_OVERTEMP, &tos, 2)) {
+    if (read_uint16_register(dev, PCT2075_REG_OVERTEMP, &tos)) {
     	LOG_ERR("Cannot read overtemp register.");
-    	return -ENODEV;
+    	return -EIO;
     }
 
-    if (read_register(dev, PCT2075_REG_HYST, &thys, 2)) {
+    if (read_uint16_register(dev, PCT2075_REG_HYST, &thys)) {
     	LOG_ERR("Cannot read hysteresis register.");
-    	return -ENODEV;
+    	return -EIO;
     }
 
     if (tos == OVR_STD && thys == HYS_STD) {
@@ -115,6 +129,15 @@ static int pct2075_chip_init(const struct device *dev)
 static int pct2075_sample_fetch(const struct device *dev,
 			       enum sensor_channel chan)
 {
+    struct pct2075_data *data = dev->data;
+
+	if (read_uint16_register(dev, PCT2075_REG_TEMP, &data->rawtemp)) {
+    	LOG_ERR("Cannot read temperature register.");
+    	return -EIO;
+    }
+
+    data->rawtemp = data->rawtemp >> 5;
+
 	return 0;
 }
 
@@ -122,6 +145,14 @@ static int pct2075_channel_get(const struct device *dev,
 			      enum sensor_channel chan,
 			      struct sensor_value *val)
 {
+	if (chan != SENSOR_CHAN_AMBIENT_TEMP) {
+		return -ENOTSUP;
+	}
+
+    struct pct2075_data *data = dev->data;
+    val->val1 = data->rawtemp >> 3;
+    val->val2 = (data->rawtemp & 0x07) * 125000;
+
 	return 0;
 }
 

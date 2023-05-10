@@ -65,13 +65,22 @@ void main(void)
 		return;
 	}
 
+	int numerr = 0;
 	while (1) {
 		struct sensor_value temp;
 
 		sensor_sample_fetch(dev);
-		sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+		ret = sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+		if (ret) {
+			printk("Error: %d\n", ret);
+			++numerr;
+			if (numerr > 5)
+				return;
+		} else {
+			numerr = 0;
+		}
 
-		printk("temperature: %d.%06d\n", temp.val1);
+		printk("temperature: %d.%06d\n", temp.val1, temp.val2);
 
 		gpio_pin_set_dt(&led, 1);
 		k_sleep(K_MSEC(500));
