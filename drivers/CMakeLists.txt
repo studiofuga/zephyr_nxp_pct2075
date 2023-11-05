@@ -1,0 +1,1 @@
+add_subdirectory_ifdef(CONFIG_PCT2075 pct2075)

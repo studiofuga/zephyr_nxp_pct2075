@@ -4,7 +4,7 @@
 config PCT2075
 	bool "Driver for NXP PCT2075"
 	default y
-	#depends on DT_HAS_NXP_PCT2075_ENABLED
+	depends on DT_HAS_NXP_PCT2075_ENABLED
 	select I2C
 	select SENSOR
 	help
